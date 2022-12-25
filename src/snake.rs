@@ -1,7 +1,7 @@
 pub mod snake {
     use crate::constants::constants::*;
     use opengl_graphics::GlGraphics;
-    use piston::{RenderArgs, UpdateArgs};
+    use piston::RenderArgs;
 
     pub struct Snake {
         snake: Vec<(i32, i32)>,
@@ -65,6 +65,10 @@ pub mod snake {
             self.direction
         }
 
+        pub fn get_head(&self) -> (i32, i32) {
+            self.snake[0]
+        }
+
         pub fn is_dead(&self) -> bool {
             let head = self.snake[0];
 
@@ -80,6 +84,10 @@ pub mod snake {
             }
 
             false
+        }
+
+        pub fn get_size(&self) -> usize {
+            self.snake.len()
         }
     }
 }

@@ -6,22 +6,40 @@ pub mod game {
     use opengl_graphics::GlGraphics;
     use piston::{Key, RenderArgs, UpdateArgs};
 
+    pub enum MapItem {
+        Empty,
+        Snake,
+        Apple,
+    }
+
+    impl Clone for MapItem {
+        fn clone(&self) -> MapItem {
+            return match self {
+                MapItem::Empty => MapItem::Empty,
+                MapItem::Snake => MapItem::Snake,
+                MapItem::Apple => MapItem::Apple,
+            };
+        }
+    }
+
     pub struct Game {
-        pub gl: GlGraphics,
+        pub gl: Option<GlGraphics>,
         snake: Snake,
         apple: (i32, i32),
         time_to_move: f64,
         new_direction: (i32, i32),
+        turns: u32,
     }
 
     impl Game {
-        pub fn new(gl: GlGraphics) -> Game {
+        pub fn new(gl: Option<GlGraphics>) -> Game {
             Game {
                 gl,
                 snake: Snake::new(),
                 apple: (8, (GRID_SIZE / 2) as i32),
                 time_to_move: TIME_BETWEEN_MOVES,
                 new_direction: (1, 0),
+                turns: 0,
             }
         }
 
@@ -33,18 +51,21 @@ pub mod game {
 
             let square = rectangle::square(0.0, 0.0, SNAKE_SIZE);
 
-            self.gl.draw(args.viewport(), |context, gl| {
-                clear(BACKROUND, gl);
+            self.gl
+                .as_mut()
+                .unwrap()
+                .draw(args.viewport(), |context, gl| {
+                    clear(BACKROUND, gl);
 
-                let transform = context.transform.trans(
-                    self.apple.0 as f64 * SNAKE_SIZE,
-                    self.apple.1 as f64 * SNAKE_SIZE,
-                );
+                    let transform = context.transform.trans(
+                        self.apple.0 as f64 * SNAKE_SIZE,
+                        self.apple.1 as f64 * SNAKE_SIZE,
+                    );
 
-                rectangle(RED, square, transform, gl);
-            });
+                    rectangle(RED, square, transform, gl);
+                });
 
-            self.snake.render(args, &mut self.gl)
+            self.snake.render(args, &mut self.gl.as_mut().unwrap())
         }
 
         pub fn handle_input(&mut self, key: Key) {
@@ -78,7 +99,11 @@ pub mod game {
                 return;
             }
 
+            self.time_to_move -= args.dt;
+
             if self.time_to_move <= 0.0 {
+                self.turns += 1;
+
                 if self.snake.get_direction() != (-self.new_direction.0, -self.new_direction.1) {
                     self.snake.change_direction(self.new_direction);
                 }
@@ -91,13 +116,39 @@ pub mod game {
                 } else {
                     self.snake.update(false);
                 }
-            } else {
-                self.time_to_move -= args.dt;
             }
         }
 
         pub fn is_next_update_move(&self, dt: f64) -> bool {
             self.time_to_move - dt <= 0.0
+        }
+
+        pub fn get_map(&self) -> Vec<Vec<MapItem>> {
+            let mut map = vec![vec![MapItem::Empty; GRID_SIZE as usize]; GRID_SIZE as usize];
+
+            for (x, y) in self.snake.get_snake() {
+                map[*y as usize][*x as usize] = MapItem::Snake;
+            }
+
+            map[self.apple.1 as usize][self.apple.0 as usize] = MapItem::Apple;
+
+            map
+        }
+
+        pub fn get_snake_head(&self) -> (i32, i32) {
+            self.snake.get_head()
+        }
+
+        pub fn is_alive(&self) -> bool {
+            !self.snake.is_dead()
+        }
+
+        pub fn get_score(&self) -> u32 {
+            self.snake.get_size() as u32 - 2
+        }
+
+        pub fn get_turns(&self) -> u32 {
+            self.turns
         }
     }
 }
